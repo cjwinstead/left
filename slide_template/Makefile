@@ -1,28 +1,40 @@
-PROJECT_NAME=template
+NAME = slides
 
+all: $(NAME).pdf $(NAME).html
+
+MAKE=/usr/bin/make
+PANDOC=/usr/bin/pandoc
 MATHLIB=--katex
-PANDOC_OPTIONS=-f markdown+implicit_figures+pipe_tables --columns=10
 
-INSTALL_PATH=/var/www/courses/5420/
-SERVER=left.engr.usu.edu
-UNAME=winstead
-
-all: html
-
-pdf: $(PROJECT_NAME).pdf
-html: $(PROJECT_NAME).html 
+FLAGS = -s \
+	-f markdown+implicit_figures+link_attributes+citations \
+	--filter pandoc-xnos\
+	-M xnos-capitalise=true\
+	--bibliography=bibliography.bib\
+	--csl=bibliography.csl\
+	--citeproc
 
 
-$(PROJECT_NAME).pdf: $(PROJECT_NAME).md metadata.yaml
-	pandoc $(PANDOC_OPTIONS) -t beamer -o $@ metadata.yaml $<
+FLAGS_SLIDES_PDF = -s \
+	-f markdown+implicit_figures+link_attributes+raw_tex \
+	-t beamer -i\
+	--template=beamer_template.latex
 
-$(PROJECT_NAME).html: $(PROJECT_NAME).md  metadata.yaml
-	pandoc $(PANDOC_OPTIONS)  -t slidy -s $(MATHLIB) -o $@ metadata.yaml $<
+FLAGS_SLIDES_HTML = -s \
+	-f markdown+implicit_figures+link_attributes+raw_tex \
+	--columns=10 -t slidy -i --css=slides.css -s $(MATHLIB)\
+	--template=slide_template.html
 
-install: html
-	export PROJECT_NAME
-	export SERVER
-	export UNAME
-	export INSTALL_PATH
-	scp $(PROJECT_NAME).html $(UNAME)@$(SERVER):$(INSTALL_PATH)/$(PROJECT_NAME)/
-	make -C figures install
+
+
+$(NAME).pdf: $(sources) $(NAME).md
+	$(PANDOC) $(FLAGS_SLIDES_PDF) $(NAME).md -o $@
+
+$(NAME).tex: $(sources) $(NAME).md
+	$(PANDOC) $(FLAGS_SLIDES_PDF) $(NAME).md -o $@
+
+$(NAME).html: $(sources) $(NAME).md
+	$(PANDOC) $(FLAGS_SLIDES_HTML)  $(NAME).md -o $@
+
+figures:
+	$(MAKE) -C figures
